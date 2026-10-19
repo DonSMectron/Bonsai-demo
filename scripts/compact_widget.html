@@ -1,0 +1,95 @@
+<!-- Injected into the llama-server chat UI by compact_proxy.py. Self-contained, shadow-DOM isolated. -->
+<script>
+(function () {
+  if (window.__bonsaiCompactWidget) return;
+  window.__bonsaiCompactWidget = true;
+  var API = "/_compact/settings";
+  var KEY = "bonsaiCompactSettings";
+  var state = { threshold: 0.75, auto: true, ctx: 0 };
+
+  var host = document.createElement("div");
+  host.style.cssText = "position:fixed;right:12px;bottom:12px;z-index:2147483647";
+  var root = host.attachShadow({ mode: "open" });
+  root.innerHTML =
+    '<style>' +
+    ':host{all:initial}' +
+    '.w{font:12px/1.4 system-ui,sans-serif;color:#222;display:flex;flex-direction:column;align-items:flex-end;gap:6px}' +
+    '.pill{cursor:pointer;border:1px solid #8886;border-radius:999px;background:#fffe;padding:4px 10px;color:inherit;font:inherit;box-shadow:0 1px 4px #0003}' +
+    '.panel{width:250px;border:1px solid #8886;border-radius:10px;background:#fffffff2;padding:10px 12px;box-shadow:0 2px 10px #0004}' +
+    '.panel[hidden]{display:none}' +
+    '.row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}' +
+    'input[type=range]{width:100%;margin:4px 0}' +
+    '.hint{color:#666;font-size:11px;margin-top:6px}' +
+    '.err{color:#b00020}' +
+    '.err[hidden]{display:none}' +
+    '@media (prefers-color-scheme:dark){.w{color:#eee}.pill{background:#222e}.panel{background:#222f}.hint{color:#aaa}.err{color:#ff8a80}}' +
+    '</style>' +
+    '<div class="w">' +
+    '<div class="panel" hidden>' +
+    '<div class="row"><b>Auto-compact</b><label><input type="checkbox" class="auto"> on</label></div>' +
+    '<div>Compact at <b class="pct"></b></div>' +
+    '<input type="range" class="slider" min="10" max="95" step="5">' +
+    '<div class="tok"></div>' +
+    '<div class="hint">When a chat reaches this share of the context, older messages are summarized. Type /compact in the chat to compact right now.</div>' +
+    '<div class="hint err" hidden></div>' +
+    '</div>' +
+    '<button class="pill" type="button" title="Compaction settings"></button>' +
+    '</div>';
+
+  var q = function (s) { return root.querySelector(s); };
+  var panel = q(".panel"), pill = q(".pill"), slider = q(".slider"), auto = q(".auto");
+  var pct = q(".pct"), tok = q(".tok"), err = q(".err");
+
+  function show(value) {
+    pct.textContent = Math.round(value * 100) + "%";
+    tok.textContent = state.ctx
+      ? "about " + Math.round(state.ctx * value).toLocaleString() + " of " + state.ctx.toLocaleString() + " tokens"
+      : "";
+  }
+
+  function render() {
+    slider.value = Math.round(state.threshold * 100);
+    slider.disabled = !state.auto;
+    auto.checked = state.auto;
+    show(state.threshold);
+    pill.textContent = state.auto ? "Compact at " + Math.round(state.threshold * 100) + "%" : "Auto-compact off";
+  }
+
+  function fail(msg) {
+    err.hidden = !msg;
+    err.textContent = msg || "";
+  }
+
+  function send(patch) {
+    return fetch(API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch)
+    }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function (s) {
+      state = s;
+      localStorage.setItem(KEY, JSON.stringify({ threshold: s.threshold, auto: s.auto }));
+      fail("");
+      render();
+    }).catch(function (e) { fail("Could not save: " + e.message); });
+  }
+
+  slider.addEventListener("input", function () { show(slider.value / 100); });
+  slider.addEventListener("change", function () { send({ threshold: slider.value / 100 }); });
+  auto.addEventListener("change", function () { send({ auto: auto.checked }); });
+  pill.addEventListener("click", function () { panel.hidden = !panel.hidden; });
+
+  document.body.appendChild(host);
+  render();
+
+  fetch(API).then(function (r) { return r.json(); }).then(function (s) {
+    state = s;
+    render();
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
+    if (saved && (saved.threshold !== s.threshold || saved.auto !== s.auto)) return send(saved);
+  }).catch(function () { fail("Compaction proxy settings unavailable"); });
+})();
+</script>

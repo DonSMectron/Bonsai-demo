@@ -1,5 +1,14 @@
 # Bonsai Demo
 
+after setup has run use:
+cd C:\Bonsai-2\Bonsai-demo
+.\scripts\start_llama_server.ps1
+
+or
+
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\scripts\start_llama_server.ps1
+
 Backend and model format compatibility: [BACKEND-SUPPORT.md](BACKEND-SUPPORT.md).
 
 <p align="center">
@@ -320,6 +329,8 @@ The launch scripts pick a **default context sized to your machine's RAM**, from 
 With the optional [4-bit KV cache](KV-CACHE.md) (`BONSAI_KV4=1`) the cache drops to roughly 18 KiB per token, about **1.8 GiB at 100K**, saving roughly 4.5 GiB of KV memory. Total memory also depends on the model packing, runtime buffers, and vision projector.
 
 Extra arguments pass straight through to llama.cpp, so `./scripts/run_llama.sh -c 8192 -p "Your prompt"` also works for a one-off context override.
+
+**Long chats:** the chat UI resends the whole history each turn, so a long conversation eventually exceeds the context. Run `./scripts/start_compact_proxy.sh` (`.\scripts\start_compact_proxy.ps1` on Windows), open `http://localhost:8081`, and type `/compact` to summarize the chat, or let it compact automatically near the limit (adjustable with an on-page slider). Details: [COMPACT.md](COMPACT.md).
 
 For earlier-model memory tables, see [Bonsai 1 context and memory](Bonsai1_README.md#context-and-memory).
 

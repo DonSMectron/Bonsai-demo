@@ -26,6 +26,12 @@ Every script in this repo is driven by environment variables — model selection
 | `PORT` | `8080` | Port for `start_llama_server.sh`. |
 | `BONSAI_SPEC_NMAX` | `4` | int | dspark draft n-max override (PowerShell scripts only). |
 | `BONSAI_KV4` | `0` | `1` | 4-bit (Q4_0) KV cache, ~3.5x less KV memory for very long contexts; decode slightly slower than F16. Optional calibration bias via `./scripts/make_kv_bias.sh`. [KV-CACHE.md](KV-CACHE.md) |
+| **`/compact` proxy (`start_compact_proxy.*`)** | | | |
+| `BONSAI_PROXY_PORT` / `BONSAI_PROXY_HOST` | `8081` / `127.0.0.1` | port / bind address | Where the compaction proxy listens. [COMPACT.md](COMPACT.md) |
+| `BONSAI_UPSTREAM` | `http://127.0.0.1:8080` | `http://host:port` | The llama-server the proxy forwards to. |
+| `BONSAI_COMPACT_AT` | `0.75` | `0.1` to `0.95` | Auto-compact when a request exceeds this fraction of the context. |
+| `BONSAI_COMPACT_AUTO` | `1` | `0` | `0` = compact only when you type `/compact`. |
+| `BONSAI_COMPACT_CTX` | from the server | tokens | Override the context size the proxy assumes. |
 | **Agentic demo (`start_agent_server.sh`, AGENT-DEMO.md)** | | | |
 | `AGENT_REASONING_BUDGET` | `16384` | tokens, `-1` = unlimited | Thinking budget per turn (`--reasoning-budget`); the server force-closes thinking at this count. |
 | `AGENT_MIN_P` | `0.05` | `0` to `1` | Sampler min-p for the agent profile; the model card's thinking-mode value. The skateboard recording used `0`. |
