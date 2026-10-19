@@ -7,8 +7,25 @@ Option	Download size	Recommendation
 
 ## 27B PTQ1_0
 
+# -  compact proxy pointed at 8080
+$workspace = "C:\Build\Projects\sudoku-v4"
 Set-Location C:\Build\Projects\Bonsai-demo
-$workspace = "C:\Build\Projects\sudoku-v4\"
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\start_compact_proxy.ps1 `
+    --upstream http://127.0.0.1:8080 --port 8082
+
+# - mcp
+$workspace = "C:\Build\Projects\sudoku-v4"
+npx.cmd -y supergateway `
+    --stdio "npx.cmd -y @modelcontextprotocol/server-filesystem `"$workspace`"" `
+    --outputTransport streamableHttp `
+    --stateful `
+    --host 127.0.0.1 `
+    --port 8001 `
+    --cors "http://localhost:8080" "http://localhost:8082"
+
+# - model load
+Set-Location C:\Build\Projects\Bonsai-demo
+$workspace = "C:\Build\Projects\sudoku-v4"
 $env:BONSAI_FAMILY = "bonsai2"
 $env:BONSAI_MODEL = "27B"
 $env:BONSAI_CTX = "4096"
@@ -24,15 +41,9 @@ $model = ".\models\bonsai2-gguf\27B\Ternary-Bonsai-2-27B-$quant.gguf"
     --reasoning-budget 512 `
     --webui-config-file .\scripts\webui-config.json
 
-    - and cor mcp -
-npx.cmd -y supergateway `
-    --stdio "npx.cmd -y @modelcontextprotocol/server-filesystem `"$workspace`"" `
-    --outputTransport streamableHttp `
-    --stateful `
-    --host 127.0.0.1 `
-    --port 8001 `
-    --cors "http://localhost:8080"
-    
+
+
+
 ## 27B  PQ2_0
 
 Set-Location C:\Build\Projects\Bonsai-demo
