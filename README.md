@@ -1,13 +1,83 @@
 # Bonsai Demo
 
-after setup has run use:
-cd C:\Bonsai-2\Bonsai-demo
-.\scripts\start_llama_server.ps1
+Option	Download size	Recommendation
+27B PTQ1_0	5.95 GB / 5.54 GiB	Best starting choice for your 8 GB GPU
+27B PQ2_0	7.21 GB / 6.71 GiB	Faster prompt processing on many devices, but tight VRAM headroom
+9B PQ2_0	2.42 GB / 2.25 GiB	Smaller-model alternative if you prioritize ample headroom
 
-or
+## 27B PTQ1_0
 
+Set-Location C:\Build\Projects\Bonsai-demo
+$workspace = "C:\Build\Projects\sudoku-v4\"
+$env:BONSAI_FAMILY = "bonsai2"
+$env:BONSAI_MODEL = "27B"
+$env:BONSAI_CTX = "4096"
+$quant = "PTQ1_0"
+$model = ".\models\bonsai2-gguf\27B\Ternary-Bonsai-2-27B-$quant.gguf"
+.\bin\cuda\llama-server.exe `
+    -m $model `
+    --host 127.0.0.1 --port 8080 `
+    -ngl 99 -fa on `
+    -c 64000 -np 1 -b 2560 -ub 1280 `
+    --jinja `
+    --temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.05 `
+    --reasoning-budget 512 `
+    --webui-config-file .\scripts\webui-config.json
+
+    - and cor mcp -
+npx.cmd -y supergateway `
+    --stdio "npx.cmd -y @modelcontextprotocol/server-filesystem `"$workspace`"" `
+    --outputTransport streamableHttp `
+    --stateful `
+    --host 127.0.0.1 `
+    --port 8001 `
+    --cors "http://localhost:8080"
+    
+## 27B  PQ2_0
+
+Set-Location C:\Build\Projects\Bonsai-demo
+$env:BONSAI_FAMILY = "bonsai2"
+$env:BONSAI_MODEL = "27B"
+$env:BONSAI_CTX = "2048"
+$env:BONSAI_NGL = "99"
+$env:BONSAI_MMPROJ_CPU = "1"
+$quant = "PQ2_0"
+$model = ".\models\bonsai2-gguf\27B\Ternary-Bonsai-2-27B-$quant.gguf"
+.\bin\cuda\llama-server.exe `
+    -m $model `
+    --host 127.0.0.1 --port 8080 `
+    -ngl 99 -fa on `
+    -c 64000 -np 1 -b 256 -ub 128 `
+    --jinja `
+    --temp 1.0 --top-p 0.95 --top-k 20 --min-p 0.05 `
+    --reasoning-budget 512 `
+    --webui-config-file .\scripts\webui-config.json
+
+
+## Start with 2K context because PQ2_0 leaves little headroom on your 8 GB GPU. The projector setting saves VRAM if a vision projector is present.
+
+## If startup runs out of GPU memory, try partial CPU offload:
+
+$env:BONSAI_NGL = "50"
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\scripts\start_llama_server.ps1
+.\scripts\start_llama_server.ps1 -np 1 -b 128 -ub 64 --reasoning-budget 512
+
+
+## Lower that layer count further if necessary; CPU offload can reduce speed.
+## Selection note: the launcher prefers PQ2_0 over PTQ1_0 when both are in the same model directory.
+
+## 9B PQ2_0 — much more headroom
+
+Set-Location C:\Build\Projects\Bonsai-demo
+$env:BONSAI_FAMILY = "bonsai2"
+$env:BONSAI_MODEL = "9B"
+$env:BONSAI_CTX = "8192"
+$env:BONSAI_NGL = "99"
+$env:BONSAI_THINKING = "1"
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\scripts\start_llama_server.ps1 -np 1 -b 256 -ub 128 --reasoning-budget 2048
+
+
 
 Backend and model format compatibility: [BACKEND-SUPPORT.md](BACKEND-SUPPORT.md).
 
